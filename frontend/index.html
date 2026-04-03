@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>Gym Recorder</title>
+  <link rel="manifest" href="/manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+      color: #a0c4ff;
+      text-align: center;
+    }
+    p.subtitle {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+    #preview {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      display: none;
+      margin-bottom: 16px;
+      border: 2px solid #2a2a4a;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      max-width: 400px;
+      padding: 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { opacity: 0.75; transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    #captureBtn { background: #4361ee; color: #fff; }
+    #uploadBtn  { background: #7b2d8b; color: #fff; display: none; }
+    #status {
+      margin-top: 20px;
+      padding: 14px 18px;
+      border-radius: 10px;
+      max-width: 400px;
+      width: 100%;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      display: none;
+      word-break: break-word;
+    }
+    .success { background: #0d2b1e; color: #74c69d; border: 1px solid #1a5c3a; }
+    .error   { background: #2b0d0d; color: #ff8080; border: 1px solid #5c1a1a; }
+    .loading { background: #0d1b2b; color: #90caf9; border: 1px solid #1a3a5c; }
+    .sheet-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #90caf9;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gym Recorder</h1>
+  <p class="subtitle">Photograph a notebook page to save your workout</p>
+
+  <img id="preview" alt="Selected notebook page">
+
+  <button class="btn" id="captureBtn">📷 Take Photo</button>
+  <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none">
+
+  <button class="btn" id="uploadBtn">Upload &amp; Parse</button>
+
+  <div id="status"></div>
+
+  <script>
+    const captureBtn = document.getElementById('captureBtn');
+    const fileInput  = document.getElementById('fileInput');
+    const uploadBtn  = document.getElementById('uploadBtn');
+    const preview    = document.getElementById('preview');
+    const statusEl   = document.getElementById('status');
+    let selectedFile = null;
+
+    captureBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (!selectedFile) return;
+      preview.src = URL.createObjectURL(selectedFile);
+      preview.style.display = 'block';
+      uploadBtn.style.display = 'block';
+      hideStatus();
+    });
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      showStatus('Uploading and parsing your workout...', 'loading');
+      uploadBtn.disabled = true;
+      captureBtn.disabled = true;
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+
+        showStatus(
+          `Saved! <strong>${escapeHtml(data.workout_name)}</strong> on ${escapeHtml(data.date)}<br>` +
+          `${data.exercises_parsed} exercise(s), ${data.cardio_parsed} cardio item(s) parsed.<br>` +
+          `<a class="sheet-link" href="${escapeHtml(data.sheet_url)}" target="_blank" rel="noopener">View in Google Sheets →</a>`,
+          'success'
+        );
+        uploadBtn.style.display = 'none';
+        preview.style.display = 'none';
+        selectedFile = null;
+        fileInput.value = '';
+      } catch (err) {
+        showStatus(`Error: ${escapeHtml(err.message)}`, 'error');
+      } finally {
+        uploadBtn.disabled = false;
+        captureBtn.disabled = false;
+      }
+    });
+
+    function showStatus(html, type) {
+      statusEl.innerHTML = html;
+      statusEl.className = type;
+      statusEl.style.display = 'block';
+    }
+
+    function hideStatus() {
+      statusEl.style.display = 'none';
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
