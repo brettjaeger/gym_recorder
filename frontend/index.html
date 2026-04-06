@@ -92,6 +92,15 @@
   <div id="status"></div>
 
   <script>
+    function getToken() {
+      let token = localStorage.getItem('uploadToken');
+      if (!token) {
+        token = prompt('Enter your upload token:');
+        if (token) localStorage.setItem('uploadToken', token);
+      }
+      return token;
+    }
+
     const captureBtn = document.getElementById('captureBtn');
     const fileInput  = document.getElementById('fileInput');
     const uploadBtn  = document.getElementById('uploadBtn');
@@ -120,8 +129,14 @@
       formData.append('file', selectedFile);
 
       try {
-        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const token = getToken();
+        const res = await fetch('/upload', {
+          method: 'POST',
+          headers: token ? { 'X-Upload-Token': token } : {},
+          body: formData,
+        });
         const data = await res.json();
+        if (res.status === 401) { localStorage.removeItem('uploadToken'); }
         if (!res.ok) throw new Error(data.detail || 'Upload failed');
 
         showStatus(

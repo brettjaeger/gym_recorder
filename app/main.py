@@ -2,7 +2,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+import os
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 
 from app.claude_parser import parse_workout_image
@@ -10,6 +11,8 @@ from app.sheets_client import append_workout_to_sheet
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+UPLOAD_TOKEN = os.environ.get("UPLOAD_TOKEN")
 
 app = FastAPI()
 
@@ -20,7 +23,9 @@ async def health():
 
 
 @app.post("/upload")
-async def upload_workout(file: UploadFile = File(...)):
+async def upload_workout(file: UploadFile = File(...), x_upload_token: str = Header(default=None)):
+    if UPLOAD_TOKEN and x_upload_token != UPLOAD_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=415, detail=f"Unsupported image type: {file.content_type}")
 
