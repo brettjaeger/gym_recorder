@@ -5,7 +5,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 
-from app.gemini_parser import parse_workout_image
+from app.claude_parser import parse_workout_image
 from app.sheets_client import append_workout_to_sheet
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
