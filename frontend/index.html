@@ -54,8 +54,7 @@
     }
     .btn:active { opacity: 0.75; transform: scale(0.98); }
     .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-    #cameraBtn  { background: #4361ee; color: #fff; }
-    #galleryBtn { background: #2d6a4f; color: #fff; }
+    #captureBtn { background: #4361ee; color: #fff; }
     #uploadBtn  { background: #7b2d8b; color: #fff; display: none; }
     #status {
       margin-top: 20px;
@@ -85,45 +84,37 @@
 
   <img id="preview" alt="Selected notebook page">
 
-  <button class="btn" id="cameraBtn">📷 Take Photo</button>
-  <button class="btn" id="galleryBtn">🖼 Choose from Library</button>
-  <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none">
-  <input type="file" id="galleryInput" accept="image/*" style="display:none">
+  <button class="btn" id="captureBtn">📷 Take Photo / Upload</button>
+  <input type="file" id="fileInput" accept="image/*" style="display:none">
 
   <button class="btn" id="uploadBtn">Upload &amp; Parse</button>
 
   <div id="status"></div>
 
   <script>
-    const cameraBtn   = document.getElementById('cameraBtn');
-    const galleryBtn  = document.getElementById('galleryBtn');
-    const cameraInput = document.getElementById('cameraInput');
-    const galleryInput= document.getElementById('galleryInput');
-    const uploadBtn   = document.getElementById('uploadBtn');
-    const preview     = document.getElementById('preview');
-    const statusEl    = document.getElementById('status');
-    let selectedFile  = null;
+    const captureBtn = document.getElementById('captureBtn');
+    const fileInput  = document.getElementById('fileInput');
+    const uploadBtn  = document.getElementById('uploadBtn');
+    const preview    = document.getElementById('preview');
+    const statusEl   = document.getElementById('status');
+    let selectedFile = null;
 
-    cameraBtn.addEventListener('click', () => cameraInput.click());
-    galleryBtn.addEventListener('click', () => galleryInput.click());
+    captureBtn.addEventListener('click', () => fileInput.click());
 
-    function onFileSelected(e) {
+    fileInput.addEventListener('change', (e) => {
       selectedFile = e.target.files[0];
       if (!selectedFile) return;
       preview.src = URL.createObjectURL(selectedFile);
       preview.style.display = 'block';
       uploadBtn.style.display = 'block';
       hideStatus();
-    }
-    cameraInput.addEventListener('change', onFileSelected);
-    galleryInput.addEventListener('change', onFileSelected);
+    });
 
     uploadBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
       showStatus('Uploading and parsing your workout...', 'loading');
       uploadBtn.disabled = true;
-      cameraBtn.disabled = true;
-      galleryBtn.disabled = true;
+      captureBtn.disabled = true;
 
       const formData = new FormData();
       formData.append('file', selectedFile);
@@ -142,14 +133,12 @@
         uploadBtn.style.display = 'none';
         preview.style.display = 'none';
         selectedFile = null;
-        cameraInput.value = '';
-        galleryInput.value = '';
+        fileInput.value = '';
       } catch (err) {
         showStatus(`Error: ${escapeHtml(err.message)}`, 'error');
       } finally {
         uploadBtn.disabled = false;
-        cameraBtn.disabled = false;
-        galleryBtn.disabled = false;
+        captureBtn.disabled = false;
       }
     });
 
